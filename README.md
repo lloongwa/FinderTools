@@ -14,7 +14,7 @@
 ## 安装
 
 ```bash
-cd /Users/lloong/Documents/codes/mac-finder-tools
+cd mac-finder-tools
 python3 build_services.py
 ```
 
@@ -27,6 +27,10 @@ python3 build_services.py
 > 注意是「服务」子菜单，不是「快速操作」区。
 > 如果看不到：先 `killall Finder`；还不行就注销重登录；
 > 再到「系统设置 → 键盘 → 键盘快捷键 → 服务」确认这些项已勾选。
+>
+> 服务要求有传入的文件项，所以要对准**文件或文件夹**右键；
+> 右键窗口空白处（无选中项）时菜单里大概率不出现。
+> 对文件夹右键 = 作用于文件夹本身，对文件右键 = 作用于其所在目录（如新建文件）。
 
 ## 命令
 
@@ -61,7 +65,7 @@ python3 build_services.py --clean      # 全部删除
 python3 test_scripts.py
 ```
 
-从生成的 `.workflow` 里提取 shell 脚本，做语法检查 + 功能冒烟测试（压缩产物、剪贴板内容、剪切粘贴移动、git 状态解析）。
+从生成的 `.workflow` 里提取 shell 脚本，做语法检查 + 功能冒烟测试（压缩产物、剪贴板内容、剪切粘贴移动、git 状态解析）。只测本项目生成的 13 个操作，不碰 `~/Library/Services` 里的第三方 workflow。测试会临时改写剪贴板和剪切列表，结束后自动恢复（剪贴板仅按纯文本恢复）。
 
 需要 GUI 弹窗的操作（新建文件/复制到/移动到/打开终端/VS Code）和会重启 Finder 的操作（显示隐藏文件）只做语法检查，标注为手动验证。
 
@@ -93,18 +97,14 @@ python3 test_scripts.py
 mac-finder-tools/
 ├── build_services.py      # 生成器:生成 13 个 .workflow
 ├── test_scripts.py        # 测试:脚本语法 + 功能冒烟测试
-├── README.md
-└── FinderToolsApp/        # [已废弃] 见下
+└── README.md
 ```
 
-### FinderToolsApp（已废弃，待删除）
-
-曾经做过的菜单栏常驻 App 方案，已废弃。原因：它必须靠 AppleScript 主动询问
-Finder「你选中了什么」，而本机自动化授权未授予，`osascript` 一律返回
-`权限违例 (-10004)`，功能完全不可用。
-
-相比之下 `.workflow` 方案由系统直接把选中文件作为 `$@` 传入，**不需要任何授权**，
-而且零常驻进程。进程已停止，源码保留仅作回退余地，确认主方案可用后删除。
+> 历史上还做过一个菜单栏常驻 App 方案（FinderToolsApp），已废弃删除。
+> 废弃原因：它必须靠 AppleScript 主动询问 Finder「你选中了什么」，
+> 而本机自动化授权未授予，`osascript` 一律返回 `权限违例 (-10004)`。
+> 相比之下 `.workflow` 方案由系统直接把选中文件作为 `$@` 传入，不需要任何授权，
+> 而且零常驻进程。旧源码可翻 git 历史第一个提交。
 
 ## 改操作逻辑
 
