@@ -6,6 +6,9 @@
 自动化测试无法覆盖需要 GUI 交互的操作(新建文件/复制到/移动到/打开终端/VS Code),
 这些只做语法检查,标注为需要手动验证。
 
+测试会临时改写剪贴板和 cut-list,结束后恢复原内容(注:剪贴板只按纯文本恢复,
+若原内容是图片等非文本数据,恢复后会变成空文本)。
+
 用法:
     python3 test_scripts.py
 """
@@ -16,8 +19,15 @@ import shutil
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from build_services import ACTIONS
+
 SERVICES_DIR = os.path.expanduser("~/Library/Services")
 TEST_ROOT = "/tmp/finder-tools-test"
+CUT_LIST = os.path.expanduser("~/.local/state/finder-tools/cut-list")
+
+# 只测本项目生成的操作,不碰 ~/Library/Services 里的第三方 workflow
+PROJECT_KEYS = {a["key"] for a in ACTIONS}
 
 # 需要 GUI 交互,只做语法检查
 INTERACTIVE = {"new_file", "copy_to", "move_to", "open_terminal", "open_vscode"}
@@ -85,14 +95,35 @@ def set_clipboard(s):
     subprocess.run(["pbcopy"], input=s, text=True)
 
 
-def main():
+def save_state():
+    """备份测试将要改写的用户状态:剪贴板文本与 cut-list"""
+    clip = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
+    cut = None
+    if os.path.exists(CUT_LIST):
+        with open(CUT_LIST, encoding="utf-8") as f:
+            cut = f.read()
+    return clip, cut
+
+
+def restore_state(clip, cut):
+    subprocess.run(["pbcopy"], input=clip, text=True)
+    if cut is None:
+        if os.path.exists(CUT_LIST):
+            os.remove(CUT_LIST)
+    else:
+        os.makedirs(os.path.dirname(CUT_LIST), exist_ok=True)
+        with open(CUT_LIST, "w", encoding="utf-8") as f:
+            f.write(cut)
+
+
+def run_tests():
     keys = sorted(
         d[:-len(".workflow")]
         for d in os.listdir(SERVICES_DIR)
-        if d.endswith(".workflow")
+        if d.endswith(".workflow") and d[:-len(".workflow")] in PROJECT_KEYS
     )
     if not keys:
-        print("~/Library/Services 下没有生成的操作")
+        print("~/Library/Services 下没有本项目的操作,先运行 python3 build_services.py")
         return 1
 
     print("=" * 60)
@@ -208,4 +239,8 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    clip, cut = save_state()
+    try:
+        sys.exit(run_tests())
+    finally:
+        restore_state(clip, cut)

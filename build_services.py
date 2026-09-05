@@ -28,8 +28,12 @@ PBS = "/System/Library/CoreServices/pbs"
 
 # Automator 执行脚本时 PATH 很干净(不含 homebrew),这里统一补上
 SCRIPT_HEADER = r'''export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+# 文件名可能含 " 或 \,直接拼进 AppleScript 字符串会打破语法,先转义
+esc() {
+  printf '%s' "$1" | tr -d '\n\r' | sed -e 's/\\/\\\\/g' -e 's/"/\\\\"/g'
+}
 notify() {
-  osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true
+  osascript -e "display notification \"$(esc "$2")\" with title \"$(esc "$1")\"" >/dev/null 2>&1 || true
 }
 target_dir() {
   if [ -d "$1" ]; then printf '%s' "$1"; else printf '%s' "$(dirname "$1")"; fi
@@ -40,8 +44,9 @@ uniq_path() {
   local d n ext base
   d="$(dirname "$p")"; n="$(basename "$p")"
   ext=""; base="$n"
+  # ?*.?* 排除 .hidden 这类点文件(首段为空不算扩展名)
   case "$n" in
-    *.*) ext=".${n##*.}"; base="${n%.*}" ;;
+    ?*.?*) ext=".${n##*.}"; base="${n%.*}" ;;
   esac
   local i=1
   while [ -e "$d/${base}-${i}${ext}" ]; do i=$((i + 1)); done
@@ -94,9 +99,10 @@ AS
 )
 if [ -z "$name" ]; then exit 0; fi
 p="$(uniq_path "$d/$name")"
+mkdir -p "$(dirname "$p")"
 touch "$p"
 notify "新建文件" "$(basename "$p")"
-osascript -e "tell application \"Finder\" to reveal POSIX file \"$p\"" >/dev/null 2>&1
+osascript -e "tell application \"Finder\" to reveal POSIX file \"$(esc "$p")\"" >/dev/null 2>&1
 osascript -e 'tell application "Finder" to activate' >/dev/null 2>&1''',
     },
     # ---------------------------------------------------------------
@@ -107,10 +113,9 @@ osascript -e 'tell application "Finder" to activate' >/dev/null 2>&1''',
 for f in "$@"; do
   d="$(dirname "$f")"; b="$(basename "$f")"
   out="$(uniq_path "$d/$b.zip")"
-  ( cd "$d" && ditto -c -k --sequesterRsrc --keepParent "$b" "$(basename "$out")" )
-  n=$((n + 1))
+  ( cd "$d" && ditto -c -k --sequesterRsrc --keepParent "$b" "$(basename "$out")" ) && n=$((n + 1))
 done
-notify "压缩为 ZIP" "完成 ${n} 项"''',
+notify "压缩为 ZIP" "完成 ${n}/${#} 项"''',
     },
     # ---------------------------------------------------------------
     {
@@ -120,10 +125,9 @@ notify "压缩为 ZIP" "完成 ${n} 项"''',
 for f in "$@"; do
   d="$(dirname "$f")"; b="$(basename "$f")"
   out="$(uniq_path "$d/$b.tar.gz")"
-  tar -czf "$out" -C "$d" "$b"
-  n=$((n + 1))
+  tar -czf "$out" -C "$d" "$b" && n=$((n + 1))
 done
-notify "压缩为 TAR.GZ" "完成 ${n} 项"''',
+notify "压缩为 TAR.GZ" "完成 ${n}/${#} 项"''',
     },
     # ---------------------------------------------------------------
     {
@@ -140,10 +144,9 @@ AS
 if [ -z "$target" ]; then exit 0; fi
 n=0
 for f in "$@"; do
-  cp -R "$f" "$target"
-  n=$((n + 1))
+  cp -R "$f" "$target" && n=$((n + 1))
 done
-notify "复制到" "${n} 项已复制到 $(basename "$target")"''',
+notify "复制到" "${n}/${#} 项已复制到 $(basename "$target")"''',
     },
     # ---------------------------------------------------------------
     {
@@ -160,10 +163,9 @@ AS
 if [ -z "$target" ]; then exit 0; fi
 n=0
 for f in "$@"; do
-  mv "$f" "$target"
-  n=$((n + 1))
+  mv "$f" "$target" && n=$((n + 1))
 done
-notify "移动到" "${n} 项已移动到 $(basename "$target")"''',
+notify "移动到" "${n}/${#} 项已移动到 $(basename "$target")"''',
     },
     # ---------------------------------------------------------------
     {
