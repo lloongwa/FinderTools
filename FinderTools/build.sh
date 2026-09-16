@@ -14,6 +14,7 @@ APP="$NAME.app"
 BIN="$APP/Contents/MacOS/$NAME"
 DEST="$HOME/Applications/$APP"
 PBS="/System/Library/CoreServices/pbs"
+VERSION="$(grep -A1 CFBundleShortVersionString Info.plist | tail -1 | sed -E 's/.*>([0-9.]+)<.*/\1/')"
 
 # 旧版 workflow 方案生成的 13 个操作,装 App 版时必须移除,否则右键菜单重复
 LEGACY_WORKFLOWS=(copy_path copy_name new_file compress_zip compress_targz
@@ -35,6 +36,8 @@ build() {
 
     echo "==> 组装 $APP"
     cp Info.plist "$APP/Contents/Info.plist"
+    mkdir -p "$APP/Contents/Resources"
+    cp Resources/FinderTools.icns "$APP/Contents/Resources/"
 
     echo "==> ad-hoc 签名"
     codesign --force --sign - "$APP"
@@ -66,6 +69,38 @@ uninstall_app() {
     "$PBS" -flush >/dev/null 2>&1 || true
     killall -HUP pbs >/dev/null 2>&1 || true
     echo "已卸载 $DEST"
+}
+
+# 重新生成 Resources/FinderTools.icns(改了 make_icon.swift 后跑这个)
+icon() {
+    echo "==> 渲染图标"
+    local tmp
+    tmp="$(mktemp -d)"
+    swift make_icon.swift "$tmp/icon_1024.png"
+    mkdir -p "$tmp/iconset" Resources
+    for s in 16 32 64 128 256 512; do
+        sips -z $s $s "$tmp/icon_1024.png" --out "$tmp/iconset/icon_${s}x${s}.png" >/dev/null
+        local d=$((s * 2))
+        sips -z $d $d "$tmp/icon_1024.png" --out "$tmp/iconset/icon_${s}x${s}@2x.png" >/dev/null
+    done
+    iconutil -c icns "$tmp/iconset" -o Resources/FinderTools.icns
+    rm -rf "$tmp"
+    echo "==> 已生成 Resources/FinderTools.icns"
+}
+
+# 打 DMG:App + 指向 /Applications 的链接(拖拽安装),输出到仓库根 dist/
+dmg() {
+    build
+    local stage dist
+    stage="$(mktemp -d)"
+    dist="$(dirname "$PWD")/dist"
+    cp -R "$APP" "$stage/FinderTools.app"
+    ln -s /Applications "$stage/Applications"
+    mkdir -p "$dist"
+    hdiutil create -volname FinderTools -srcfolder "$stage" -ov -format UDZO \
+        "$dist/FinderTools-$VERSION.dmg" | tail -1
+    rm -rf "$stage"
+    echo "==> 已生成 $dist/FinderTools-$VERSION.dmg"
 }
 
 selftest() {
@@ -133,5 +168,7 @@ case "${1:-build}" in
     install)   install_app ;;
     uninstall) uninstall_app ;;
     selftest)  selftest ;;
-    *) echo "用法: bash build.sh [build|install|uninstall|selftest]"; exit 1 ;;
+    icon)      icon ;;
+    dmg)       dmg ;;
+    *) echo "用法: bash build.sh [build|install|uninstall|selftest|icon|dmg]"; exit 1 ;;
 esac
