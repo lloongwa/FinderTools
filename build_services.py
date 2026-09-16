@@ -35,6 +35,17 @@ esc() {
 notify() {
   osascript -e "display notification \"$(esc "$2")\" with title \"$(esc "$1")\"" >/dev/null 2>&1 || true
 }
+# 坑:服务跑在 automator.runner XPC 里,这个上下文写剪贴板时,若写方进程立刻退出
+# (pbcopy 就是这样),数据会被系统回收,剪贴板等于没写。必须让写方进程多活一会:
+# 用 osascript 写入并 delay 1.5 秒,内容才落得住。内容经临时文件传入,免去转义问题。
+clip() {
+  local f
+  f="$(mktemp "${TMPDIR:-/tmp}/finder-tools-clip.XXXXXX")"
+  printf '%s' "$1" > "$f"
+  osascript -e "set the clipboard to (read (POSIX file \"$f\") as «class utf8»)" \
+            -e "delay 1.5" >/dev/null 2>&1
+  rm -f "$f"
+}
 target_dir() {
   if [ -d "$1" ]; then printf '%s' "$1"; else printf '%s' "$(dirname "$1")"; fi
 }
@@ -59,21 +70,23 @@ ACTIONS = [
     {
         "key": "copy_path",
         "menu": "拷贝路径",
-        "script": r'''out=""
+        "script": r'''[ $# -eq 0 ] && { notify "拷贝路径" "没有取到选中项"; exit 0; }
+out=""
 n=0
 for f in "$@"; do
   n=$((n + 1))
   if [ -z "$out" ]; then out="$f"; else out="$out
 $f"; fi
 done
-printf '%s' "$out" | pbcopy
+clip "$out"
 notify "拷贝路径" "已复制 ${n} 个路径到剪贴板"''',
     },
     # ---------------------------------------------------------------
     {
         "key": "copy_name",
         "menu": "拷贝名称",
-        "script": r'''out=""
+        "script": r'''[ $# -eq 0 ] && { notify "拷贝名称" "没有取到选中项"; exit 0; }
+out=""
 n=0
 for f in "$@"; do
   n=$((n + 1))
@@ -81,14 +94,15 @@ for f in "$@"; do
   if [ -z "$out" ]; then out="$b"; else out="$out
 $b"; fi
 done
-printf '%s' "$out" | pbcopy
+clip "$out"
 notify "拷贝名称" "已复制 ${n} 个文件名"''',
     },
     # ---------------------------------------------------------------
     {
         "key": "new_file",
         "menu": "新建文件…",
-        "script": r'''d="$(target_dir "$1")"
+        "script": r'''[ $# -eq 0 ] && { notify "新建文件" "请对目标文件夹右键"; exit 0; }
+d="$(target_dir "$1")"
 name=$(osascript <<'AS' 2>/dev/null
 try
   return text returned of (display dialog "文件名:" default answer "untitled.txt" with title "新建文件" with icon note)
@@ -186,7 +200,8 @@ notify "剪切" "已标记 ${n} 项,到目标文件夹右键选「粘贴到此�
     {
         "key": "paste_cut",
         "menu": "粘贴到此处",
-        "script": r'''state="$HOME/.local/state/finder-tools"
+        "script": r'''[ $# -eq 0 ] && { notify "粘贴到此处" "请对目标文件夹右键"; exit 0; }
+state="$HOME/.local/state/finder-tools"
 cutfile="$state/cut-list"
 if [ ! -s "$cutfile" ]; then
   notify "粘贴到此处" "没有待剪切的项"
@@ -232,7 +247,7 @@ if [ -z "$out" ]; then
   notify "Git 状态" "选中的项不在 Git 仓库中"
   exit 0
 fi
-printf '%s\n' "$out" | pbcopy
+clip "$out"
 notify "Git 状态" "${summary}(详情已复制到剪贴板)"''',
     },
     # ---------------------------------------------------------------

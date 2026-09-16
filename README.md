@@ -69,10 +69,10 @@ python3 test_scripts.py
 
 需要 GUI 弹窗的操作（新建文件/复制到/移动到/打开终端/VS Code）和会重启 Finder 的操作（显示隐藏文件）只做语法检查，标注为手动验证。
 
-## 改代码前必读：两个静默失效的坑
+## 改代码前必读：三个静默失效的坑
 
-这两条任意一个写错，服务都会**静默地不出现在右键菜单里**——没有报错、没有日志，
-就是单纯不出现，排查成本很高。
+这三条任意一条写错，服务都会**静默失效**——没有报错、没有日志（或现象完全误导），
+排查成本很高。
 
 **1. `workflowTypeIdentifier` 必须是 `com.apple.Automator.servicesMenu`**
 
@@ -85,6 +85,16 @@ python3 test_scripts.py
 不能用 `public.item`——它是抽象顶层类型（`conforms(to: .data) == false`），
 系统不会拿它去匹配任何实际文件。当前用的是
 `public.data`（覆盖所有文件）+ `public.folder` / `public.directory`（覆盖所有文件夹）。
+
+**3. 服务上下文里 `pbcopy` 写剪贴板会「蒸发」**
+
+服务由 `com.apple.automator.runner`（XPC）执行，这个上下文里写剪贴板，
+若**写方进程立刻退出**（`pbcopy` 正是如此），写入的数据会被系统回收——
+`pbcopy` 退出码 0、当场 `pbpaste` 还能读到、几秒后消失，极具迷惑性。
+实测于 macOS 27.0。解法是 `SCRIPT_HEADER` 里的 `clip()`：
+内容写入临时文件，用 `osascript` 读入并 `set the clipboard`，再 `delay 1.5`
+让写方进程多活一会，数据才落得住。所有写剪贴板的操作必须走 `clip()`，
+不得直接用 `pbcopy`。
 
 其余约定：`document.wflow` 只写 `Contents/document.wflow` 一处（曾经两处都写，
 导致 `codesign` 因同名子资源冲突失败）；不需要签名（ZCode 同样未签名也能用）。
