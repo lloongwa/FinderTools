@@ -15,7 +15,7 @@
 |---|---|
 | 拷贝路径 | 完整路径,多选用换行分隔 |
 | 拷贝名称 | 仅文件名 |
-| 新建文件… | 在当前文件夹创建,重名自动加 `-1` 后缀 |
+| 新建文件… | 弹窗输入文件名并选格式(txt / md / csv / json / html / xml),重名自动加 `-1` 后缀 |
 | 压缩为 ZIP / TAR.GZ | ZIP 用 `ditto`,保留 macOS 扩展属性 |
 | 复制到… / 移动到… | 弹出文件夹选择框 |
 | 剪切 / 粘贴到此处 | 先标记,到目标文件夹再粘贴,补上 Finder 缺失的剪切 |
@@ -37,11 +37,14 @@
 
 1. 从 [Releases](https://github.com/lloongwa/FinderTools/releases/latest) 下载 `FinderTools-x.x.x.dmg` 并打开
 2. 把 **FinderTools.app** 拖进 **Applications**
-3. 首次打开若提示无法验证开发者,终端执行:
+3. **必做(只需一次)**:终端执行
 
 ```bash
 xattr -dr com.apple.quarantine ~/Applications/FinderTools.app
 ```
+
+> macOS 会给从网上下载的未公证 App 加「隔离」标记,不解除的话,右键操作会提示
+> **「已损坏,无法打开」**——这是 Gatekeeper 的限制,不是安装失败。解除一次后永久有效。
 
 装完即用。若右键菜单里没看到新操作,先执行 `killall Finder`。
 

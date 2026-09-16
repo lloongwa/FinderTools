@@ -100,20 +100,34 @@ func copyToPasteboard(_ text: String) {
 
 // MARK: - 弹窗(必须在主线程调用)
 
-func promptText(title: String, message: String, defaultValue: String) -> String? {
+/// 新建文件弹窗:输入文件名 + 选择常见格式
+func promptNewFile(dir: String) -> String? {
     let alert = NSAlert()
-    alert.messageText = title
-    alert.informativeText = message
-    alert.addButton(withTitle: "确定")
+    alert.messageText = "新建文件"
+    alert.informativeText = "在 \(dir) 中创建"
+    alert.addButton(withTitle: "创建")
     alert.addButton(withTitle: "取消")
-    let tf = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
-    tf.stringValue = defaultValue
-    alert.accessoryView = tf
+
+    let container = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 58))
+    let nameField = NSTextField(frame: NSRect(x: 0, y: 34, width: 320, height: 24))
+    nameField.placeholderString = "文件名(可带扩展名)"
+    let popup = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 320, height: 26))
+    // 只列空文件即可正常打开的格式;docx 这类是压缩容器,空文件打不开,不提供
+    popup.addItems(withTitles: ["txt", "md", "csv", "json", "html", "xml", "按输入的文件名"])
+    popup.selectItem(at: 0)
+    container.addSubview(nameField)
+    container.addSubview(popup)
+    alert.accessoryView = container
     NSApp.activate(ignoringOtherApps: true)
-    alert.window.initialFirstResponder = tf
+    alert.window.initialFirstResponder = nameField
+
     guard alert.runModal() == .alertFirstButtonReturn else { return nil }
-    let v = tf.stringValue.trimmingCharacters(in: .whitespaces)
-    return v.isEmpty ? nil : v
+    var name = nameField.stringValue.trimmingCharacters(in: .whitespaces)
+    guard !name.isEmpty else { return nil }
+    if !name.contains("."), let ext = popup.titleOfSelectedItem, ext != "按输入的文件名" {
+        name += "." + ext
+    }
+    return name
 }
 
 func chooseFolder(prompt: String) -> String? {
@@ -202,9 +216,7 @@ enum ItemAction: String, CaseIterable {
 
         case .newFile:
             let dir = targetDir(of: paths[0])
-            guard let name = promptText(title: "新建文件",
-                                        message: "在 \(dir) 中创建",
-                                        defaultValue: "untitled.txt") else { return }
+            guard let name = promptNewFile(dir: dir) else { return }
             let p = uniquePath(dir + "/" + name)
             try? "".write(toFile: p, atomically: true, encoding: .utf8)
             notify("新建文件", (p as NSString).lastPathComponent)

@@ -55,6 +55,11 @@ install_app() {
     for k in "${LEGACY_WORKFLOWS[@]}"; do
         rm -rf "$HOME/Library/Services/$k.workflow"
     done
+    # 清掉 /Applications 里的旧副本,否则两份 App 同时注册,右键菜单重复
+    if [ -e "/Applications/$APP" ]; then
+        rm -rf "/Applications/$APP"
+        echo "  (已移除 /Applications 里的旧副本)"
+    fi
 
     echo "==> 刷新服务注册"
     "$PBS" -flush >/dev/null 2>&1 || true
@@ -65,7 +70,7 @@ install_app() {
 }
 
 uninstall_app() {
-    rm -rf "$DEST"
+    rm -rf "$DEST" "/Applications/$APP"
     # 只删 App 会有残留:pbs 的服务注册缓存和 Finder 的菜单缓存都在,
     # 必须 flush + 重扫 + 重启 pbs/Finder,右键菜单才会真正消失
     "$PBS" -flush >/dev/null 2>&1 || true
