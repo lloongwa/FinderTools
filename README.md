@@ -1,103 +1,72 @@
-# mac-finder-tools
+# FinderTools
 
-给 macOS Finder 补上真正好用的右键操作：**拷贝路径、拷贝名称、新建文件、压缩为 ZIP/TAR.GZ、复制到、移动到、剪切、粘贴到此处、Git 状态、在此打开终端、用 VS Code 打开、显示/隐藏隐藏文件**。
+给 macOS Finder 右键菜单加 13 个实用操作的小工具。
 
-形态是一个「提供服务」的小 App（`FinderTools.app`，声明 `NSServices`）：
-
-- **零授权**——系统把 Finder 里选中的文件直接递给 App，不需要「自动化」等任何权限
-- **零常驻**——右键点击时才被系统拉起，空闲 30 秒自动退出，不占内存、无开机启动项
-- **原生 API**——剪贴板/弹窗/通知全部走 AppKit，不经 `osascript` 拼字符串
-
----
+一个不到 1 MB 的 App:右键点击时才被系统拉起,空闲 30 秒自动退出;不申请任何权限,不驻留后台。
 
 ## 安装
 
-**方式一：自己编译（推荐）**
+1. 从 [Releases](https://github.com/lloongwa/FinderTools/releases/latest) 下载 `FinderTools-x.x.x.dmg` 并打开
+2. 把 **FinderTools.app** 拖进 **Applications**
+3. 首次打开若提示无法验证开发者,终端执行:
 
 ```bash
-cd mac-finder-tools/FinderTools
-bash build.sh install
+xattr -dr com.apple.quarantine ~/Applications/FinderTools.app
 ```
 
-只需要免费的 [Xcode Command Line Tools](https://developer.apple.com/download/all/)（`xcode-select --install`），
-**不需要 Python、不需要完整 Xcode**。脚本会：编译 universal2 二进制 → ad-hoc 签名 →
-装入 `~/Applications/FinderTools.app` → 移除旧版 13 个 `.workflow`（如果有，避免菜单重复）→ 刷新系统服务注册。
+装完即用。若右键菜单里没看到新操作,先执行 `killall Finder`。
 
-**方式二：直接用编译好的 App（给别人用）**
+## 功能
 
-把 `FinderTools.app` 拖进 `~/Applications`（或 `/Applications`）即可。
-App 未经过公证（公证需要付费开发者账号），首次运行若被 Gatekeeper 拦下，
-在终端执行 `xattr -dr com.apple.quarantine ~/Applications/FinderTools.app` 即可。
-
-> 看不到右键菜单时：先 `killall Finder`；还不行就注销重登录；
-> 再到「系统设置 → 键盘 → 键盘快捷键 → 服务」确认这些项已勾选。
-
-## 使用
-
-在 Finder 中选中文件/文件夹 → 右键 → **服务** → 选择操作。
-
-> 服务要求有传入的文件项，要对准**文件或文件夹**右键；右键窗口空白处（无选中项）不出现。
-> 对文件夹右键 = 作用于文件夹本身，对文件右键 = 作用于其所在目录（如新建文件）。
-
-## 操作清单
+右键文件或文件夹 → **服务** → 选择操作:
 
 | 操作 | 说明 |
 |---|---|
-| 拷贝路径 | 完整 POSIX 路径，多项用换行分隔，原生写入剪贴板即时生效 |
-| 拷贝名称 | 纯文件名（不含路径） |
-| 新建文件… | 原生弹窗输入文件名，在当前文件夹创建，冲突自动加 `-1` 后缀，创建后在 Finder 中高亮 |
-| 压缩为 ZIP | 用 `ditto` 压缩，保留 macOS 扩展属性和资源分支 |
-| 压缩为 TAR.GZ | `tar -czf` 压缩 |
-| 复制到… | 原生文件夹选择面板 |
-| 移动到… | 同上 |
-| 剪切 | 标记选中项（写 cut-list），不立即移动 |
-| 粘贴到此处 | 把 cut-list 里的项移动到当前文件夹 |
-| Git 状态 | 把仓库/分支/改动数/领先提交数复制到剪贴板 |
-| 在此打开终端 | 在 Terminal.app 打开当前目录 |
-| 用 VS Code 打开 | 用 Visual Studio Code 打开选中项 |
-| 显示/隐藏 隐藏文件 | 切换 `AppleShowAllFiles` 并重启 Finder |
+| 拷贝路径 | 完整 POSIX 路径,多选用换行分隔 |
+| 拷贝名称 | 仅文件名 |
+| 新建文件… | 在当前文件夹创建,重名自动加 `-1` 后缀 |
+| 压缩为 ZIP / TAR.GZ | ZIP 用 `ditto`,保留 macOS 扩展属性 |
+| 复制到… / 移动到… | 弹出文件夹选择框 |
+| 剪切 / 粘贴到此处 | 先标记,到目标文件夹再粘贴,补上 Finder 缺失的剪切 |
+| Git 状态 | 仓库、分支、改动数、领先提交数,复制到剪贴板 |
+| 在此打开终端 | 在当前目录打开 Terminal |
+| 用 VS Code 打开 | — |
+| 显示/隐藏 隐藏文件 | 切换后自动重启 Finder |
 
-## 测试
+> 对**文件夹**右键,操作作用于该文件夹;对**文件**右键,操作作用于其所在目录(如新建文件)。
 
-```bash
-bash FinderTools/build.sh selftest
-```
+## 特性
 
-通过 App 的 `--run` 调试模式（`FinderTools --run <操作名> <路径...>`，可不经右键直接执行操作）
-做冒烟测试：剪贴板写入与持久性、多文件名、压缩产物、剪切粘贴、git 状态解析、空参数防御。
+- **不申请任何权限** —— 服务机制由系统直接把选中的文件递给 App,无需「自动化」「辅助功能」授权
+- **无常驻进程** —— 按需拉起、空闲自退,没有开机启动项,不占菜单栏
+- **全原生** —— 剪贴板即时生效,弹窗、文件夹选择、通知都是系统原生界面
+- macOS 13+,Apple Silicon / Intel 通用
 
-## 为什么是这个形态
+## 常见问题
 
-三种候选方案里，这是唯一同时满足「零授权 + 零常驻」的：
+**右键菜单里没有这些操作?**
 
-| | workflow 服务（legacy） | 菜单栏常驻 App | **提供 Services 的 App（本方案）** |
-|---|---|---|---|
-| 拿到 Finder 选中项 | 系统传入 `$@`，零授权 | 必须 AppleScript 问 Finder，要「自动化」授权 | 系统递文件 URL 给 App，零授权 |
-| 常驻进程 | 无 | 有 | 无（按需拉起，空闲自退） |
-| 剪贴板/弹窗 | osascript 拼 AppleScript | 原生 | 原生 |
+依次尝试:`killall Finder` → 注销重新登录 → 「系统设置 → 键盘 → 键盘快捷键 → 服务…」里勾选 FinderTools 相关项。
 
-菜单栏 App 方案在本机实测 `osascript` 访问 Finder 一律返回 `权限违例 (-10004)`，已废弃。
+## 自己编译
 
-## 开源给别人用
-
-- **使用者**：拿到 `FinderTools.app` 拖进 `~/Applications` 就能跑。运行时零依赖——不需要 Python、不需要 Xcode、任何版本 macOS 13+（Intel/Apple Silicon）都行。
-- **想自己编译**：装好 Xcode Command Line Tools 后 `bash FinderTools/build.sh install`，全程不需要 Python。
-- 欢迎基于它增删自己的服务：在 `FinderTools/Info.plist` 的 `NSServices` 数组里加一项，
-  在 `main.swift` 的 `ServiceProvider` 加对应 `@objc` 方法、`ItemAction` 加一个 case，`bash build.sh install` 即可。
-
----
-
-## legacy/（旧 workflow 方案，已被 App 方案取代）
-
-`build_services.py` 生成 13 个 Automator `.workflow` 装进 `~/Library/Services/`，
-`test_scripts.py` 对其做冒烟测试。保留作参考；若要回退：
+只需要免费的 Xcode Command Line Tools:
 
 ```bash
-python3 legacy/build_services.py        # 重新生成 workflow 服务
+xcode-select --install        # 仅首次需要
+git clone https://github.com/lloongwa/FinderTools.git
+cd FinderTools/FinderTools
+bash build.sh install         # 编译 + 安装 + 刷新服务注册
 ```
 
-该方案留下三条宝贵的坑记录（原文见 `legacy/build_services.py` 内注释）：
+不需要 Python、不需要完整 Xcode。其他命令:`bash build.sh selftest` 跑冒烟测试,`uninstall` 卸载,`dmg` 打安装包。
 
-1. **`workflowTypeIdentifier` 必须是 `com.apple.Automator.servicesMenu`**，用 `quickAction` 服务静默不出现。
-2. **`NSSendFileTypes` 必须是具体 UTI**，`public.item` 是抽象顶层类型，系统不会拿它匹配任何文件（本方案的 Info.plist 同样遵守这条）。
-3. **服务 XPC 上下文里 `pbcopy` 写剪贴板会「蒸发」**（macOS 27.0 实测）：写方进程立刻退出则数据被系统回收——退出码 0、当场可读、数秒后消失。当时用「osascript 写入 + delay 1.5 秒」绕过；App 方案跑在正常进程上下文，此坑天然不存在，剪贴板写入即时生效。
+## 加一个自己的操作
+
+1. `FinderTools/Info.plist` 的 `NSServices` 数组里加一项(菜单名 + 方法名)
+2. `main.swift` 的 `ServiceProvider` 里加对应的 `@objc` 方法
+3. `ItemAction` 里写逻辑,然后 `bash build.sh install`
+
+## 许可证
+
+[MIT](LICENSE)
