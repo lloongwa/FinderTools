@@ -66,9 +66,13 @@ install_app() {
 
 uninstall_app() {
     rm -rf "$DEST"
+    # 只删 App 会有残留:pbs 的服务注册缓存和 Finder 的菜单缓存都在,
+    # 必须 flush + 重扫 + 重启 pbs/Finder,右键菜单才会真正消失
     "$PBS" -flush >/dev/null 2>&1 || true
+    "$PBS" -update >/dev/null 2>&1 || true
     killall -HUP pbs >/dev/null 2>&1 || true
-    echo "已卸载 $DEST"
+    killall Finder >/dev/null 2>&1 || true
+    echo "已卸载 $DEST(缓存已清,右键菜单同步刷新)"
 }
 
 # 重新生成 Resources/FinderTools.icns(改了 make_icon.swift 后跑这个)
