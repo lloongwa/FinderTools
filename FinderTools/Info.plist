@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>zh_CN</string>
+	<key>CFBundleExecutable</key>
+	<string>FinderTools</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.local.findertools</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>FinderTools</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>2.0</string>
+	<key>CFBundleVersion</key>
+	<string>2</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<!-- 无 Dock 图标、无菜单栏;被系统按需拉起执行服务 -->
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSPortName</key>
+	<string>FinderTools</string>
+	<!--
+		每个 service 的 NSMessage 对应 ServiceProvider 里的
+		@objc 方法(NSMessage:userData:error: 选择器)。
+		NSSendFileTypes 必须用具体 UTI:public.item 是抽象顶层类型,
+		系统不会拿它匹配任何实际文件(legacy 方案踩过的坑,同样适用这里)。
+	-->
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>拷贝路径</string></dict>
+			<key>NSMessage</key><string>copyPath</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>拷贝名称</string></dict>
+			<key>NSMessage</key><string>copyName</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>新建文件…</string></dict>
+			<key>NSMessage</key><string>newFile</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>压缩为 ZIP</string></dict>
+			<key>NSMessage</key><string>compressZip</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>压缩为 TAR.GZ</string></dict>
+			<key>NSMessage</key><string>compressTarGz</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>复制到…</string></dict>
+			<key>NSMessage</key><string>copyTo</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>移动到…</string></dict>
+			<key>NSMessage</key><string>moveTo</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>剪切</string></dict>
+			<key>NSMessage</key><string>cut</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>粘贴到此处</string></dict>
+			<key>NSMessage</key><string>paste</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>Git 状态</string></dict>
+			<key>NSMessage</key><string>gitStatus</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>在此打开终端</string></dict>
+			<key>NSMessage</key><string>openTerminal</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>用 VS Code 打开</string></dict>
+			<key>NSMessage</key><string>openVscode</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict><key>default</key><string>显示/隐藏 隐藏文件</string></dict>
+			<key>NSMessage</key><string>toggleHidden</string>
+			<key>NSRequiredContext</key>
+			<dict><key>NSApplicationIdentifier</key><string>com.apple.finder</string></dict>
+			<key>NSSendFileTypes</key>
+			<array><string>public.data</string><string>public.folder</string><string>public.directory</string></array>
+		</dict>
+	</array>
+</dict>
+</plist>

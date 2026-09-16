@@ -2,124 +2,102 @@
 
 给 macOS Finder 补上真正好用的右键操作：**拷贝路径、拷贝名称、新建文件、压缩为 ZIP/TAR.GZ、复制到、移动到、剪切、粘贴到此处、Git 状态、在此打开终端、用 VS Code 打开、显示/隐藏隐藏文件**。
 
-形态是 Automator 服务（`.workflow`），装在 `~/Library/Services/`：
+形态是一个「提供服务」的小 App（`FinderTools.app`，声明 `NSServices`）：
 
-- 免签名、免付费开发者账号
-- **零常驻进程**——只是躺在磁盘上的静态文件，只有你点它时系统才临时拉起一个进程，
-  跑完即退，不占内存、不占菜单栏、无开机启动项
-- **不需要「自动化」授权**——系统直接把选中文件作为 `$@` 传给脚本，脚本从不主动问 Finder
+- **零授权**——系统把 Finder 里选中的文件直接递给 App，不需要「自动化」等任何权限
+- **零常驻**——右键点击时才被系统拉起，空闲 30 秒自动退出，不占内存、无开机启动项
+- **原生 API**——剪贴板/弹窗/通知全部走 AppKit，不经 `osascript` 拼字符串
 
 ---
 
 ## 安装
 
+**方式一：自己编译（推荐）**
+
 ```bash
-cd mac-finder-tools
-python3 build_services.py
+cd mac-finder-tools/FinderTools
+bash build.sh install
 ```
 
-生成 13 个 `.workflow` 到 `~/Library/Services/`，并自动刷新系统服务注册。
+只需要免费的 [Xcode Command Line Tools](https://developer.apple.com/download/all/)（`xcode-select --install`），
+**不需要 Python、不需要完整 Xcode**。脚本会：编译 universal2 二进制 → ad-hoc 签名 →
+装入 `~/Applications/FinderTools.app` → 移除旧版 13 个 `.workflow`（如果有，避免菜单重复）→ 刷新系统服务注册。
+
+**方式二：直接用编译好的 App（给别人用）**
+
+把 `FinderTools.app` 拖进 `~/Applications`（或 `/Applications`）即可。
+App 未经过公证（公证需要付费开发者账号），首次运行若被 Gatekeeper 拦下，
+在终端执行 `xattr -dr com.apple.quarantine ~/Applications/FinderTools.app` 即可。
+
+> 看不到右键菜单时：先 `killall Finder`；还不行就注销重登录；
+> 再到「系统设置 → 键盘 → 键盘快捷键 → 服务」确认这些项已勾选。
 
 ## 使用
 
 在 Finder 中选中文件/文件夹 → 右键 → **服务** → 选择操作。
 
-> 注意是「服务」子菜单，不是「快速操作」区。
-> 如果看不到：先 `killall Finder`；还不行就注销重登录；
-> 再到「系统设置 → 键盘 → 键盘快捷键 → 服务」确认这些项已勾选。
->
-> 服务要求有传入的文件项，所以要对准**文件或文件夹**右键；
-> 右键窗口空白处（无选中项）时菜单里大概率不出现。
+> 服务要求有传入的文件项，要对准**文件或文件夹**右键；右键窗口空白处（无选中项）不出现。
 > 对文件夹右键 = 作用于文件夹本身，对文件右键 = 作用于其所在目录（如新建文件）。
 
-## 命令
-
-```bash
-python3 build_services.py              # 生成全部
-python3 build_services.py copy_path    # 只生成某一个
-python3 build_services.py --list       # 列出所有操作
-python3 build_services.py --clean      # 全部删除
-```
-
-### 操作清单
+## 操作清单
 
 | 操作 | 说明 |
 |---|---|
-| 拷贝路径 | 完整 POSIX 路径，多项用换行分隔 |
+| 拷贝路径 | 完整 POSIX 路径，多项用换行分隔，原生写入剪贴板即时生效 |
 | 拷贝名称 | 纯文件名（不含路径） |
-| 新建文件… | 弹窗输入文件名，在当前文件夹创建，冲突自动加 `-1` 后缀 |
+| 新建文件… | 原生弹窗输入文件名，在当前文件夹创建，冲突自动加 `-1` 后缀，创建后在 Finder 中高亮 |
 | 压缩为 ZIP | 用 `ditto` 压缩，保留 macOS 扩展属性和资源分支 |
 | 压缩为 TAR.GZ | `tar -czf` 压缩 |
-| 复制到… | 弹窗选目标文件夹 |
-| 移动到… | 弹窗选目标文件夹 |
+| 复制到… | 原生文件夹选择面板 |
+| 移动到… | 同上 |
 | 剪切 | 标记选中项（写 cut-list），不立即移动 |
 | 粘贴到此处 | 把 cut-list 里的项移动到当前文件夹 |
 | Git 状态 | 把仓库/分支/改动数/领先提交数复制到剪贴板 |
-| 在此打开终端 | 在 Terminal.app 打开当前目录（未装 iTerm2 时的兜底） |
+| 在此打开终端 | 在 Terminal.app 打开当前目录 |
 | 用 VS Code 打开 | 用 Visual Studio Code 打开选中项 |
 | 显示/隐藏 隐藏文件 | 切换 `AppleShowAllFiles` 并重启 Finder |
 
-### 测试
+## 测试
 
 ```bash
-python3 test_scripts.py
+bash FinderTools/build.sh selftest
 ```
 
-从生成的 `.workflow` 里提取 shell 脚本，做语法检查 + 功能冒烟测试（压缩产物、剪贴板内容、剪切粘贴移动、git 状态解析）。只测本项目生成的 13 个操作，不碰 `~/Library/Services` 里的第三方 workflow。测试会临时改写剪贴板和剪切列表，结束后自动恢复（剪贴板仅按纯文本恢复）。
+通过 App 的 `--run` 调试模式（`FinderTools --run <操作名> <路径...>`，可不经右键直接执行操作）
+做冒烟测试：剪贴板写入与持久性、多文件名、压缩产物、剪切粘贴、git 状态解析、空参数防御。
 
-需要 GUI 弹窗的操作（新建文件/复制到/移动到/打开终端/VS Code）和会重启 Finder 的操作（显示隐藏文件）只做语法检查，标注为手动验证。
+## 为什么是这个形态
 
-## 改代码前必读：三个静默失效的坑
+三种候选方案里，这是唯一同时满足「零授权 + 零常驻」的：
 
-这三条任意一条写错，服务都会**静默失效**——没有报错、没有日志（或现象完全误导），
-排查成本很高。
+| | workflow 服务（legacy） | 菜单栏常驻 App | **提供 Services 的 App（本方案）** |
+|---|---|---|---|
+| 拿到 Finder 选中项 | 系统传入 `$@`，零授权 | 必须 AppleScript 问 Finder，要「自动化」授权 | 系统递文件 URL 给 App，零授权 |
+| 常驻进程 | 无 | 有 | 无（按需拉起，空闲自退） |
+| 剪贴板/弹窗 | osascript 拼 AppleScript | 原生 | 原生 |
 
-**1. `workflowTypeIdentifier` 必须是 `com.apple.Automator.servicesMenu`**
+菜单栏 App 方案在本机实测 `osascript` 访问 Finder 一律返回 `权限违例 (-10004)`，已废弃。
 
-不能用 `quickAction`。本机所有能正常出现在 Finder 右键的 workflow
-（系统自带 5 个 + 第三方 `Open in ZCode.workflow`）用的全是 `servicesMenu`，
-没有一个用 `quickAction`。
+## 开源给别人用
 
-**2. `NSSendFileTypes` 必须是具体 UTI**
-
-不能用 `public.item`——它是抽象顶层类型（`conforms(to: .data) == false`），
-系统不会拿它去匹配任何实际文件。当前用的是
-`public.data`（覆盖所有文件）+ `public.folder` / `public.directory`（覆盖所有文件夹）。
-
-**3. 服务上下文里 `pbcopy` 写剪贴板会「蒸发」**
-
-服务由 `com.apple.automator.runner`（XPC）执行，这个上下文里写剪贴板，
-若**写方进程立刻退出**（`pbcopy` 正是如此），写入的数据会被系统回收——
-`pbcopy` 退出码 0、当场 `pbpaste` 还能读到、几秒后消失，极具迷惑性。
-实测于 macOS 27.0。解法是 `SCRIPT_HEADER` 里的 `clip()`：
-内容写入临时文件，用 `osascript` 读入并 `set the clipboard`，再 `delay 1.5`
-让写方进程多活一会，数据才落得住。所有写剪贴板的操作必须走 `clip()`，
-不得直接用 `pbcopy`。
-
-其余约定：`document.wflow` 只写 `Contents/document.wflow` 一处（曾经两处都写，
-导致 `codesign` 因同名子资源冲突失败）；不需要签名（ZCode 同样未签名也能用）。
+- **使用者**：拿到 `FinderTools.app` 拖进 `~/Applications` 就能跑。运行时零依赖——不需要 Python、不需要 Xcode、任何版本 macOS 13+（Intel/Apple Silicon）都行。
+- **想自己编译**：装好 Xcode Command Line Tools 后 `bash FinderTools/build.sh install`，全程不需要 Python。
+- 欢迎基于它增删自己的服务：在 `FinderTools/Info.plist` 的 `NSServices` 数组里加一项，
+  在 `main.swift` 的 `ServiceProvider` 加对应 `@objc` 方法、`ItemAction` 加一个 case，`bash build.sh install` 即可。
 
 ---
 
-## 文件结构
+## legacy/（旧 workflow 方案，已被 App 方案取代）
 
-```
-mac-finder-tools/
-├── build_services.py      # 生成器:生成 13 个 .workflow
-├── test_scripts.py        # 测试:脚本语法 + 功能冒烟测试
-└── README.md
-```
-
-> 历史上还做过一个菜单栏常驻 App 方案（FinderToolsApp），已废弃删除。
-> 废弃原因：它必须靠 AppleScript 主动询问 Finder「你选中了什么」，
-> 而本机自动化授权未授予，`osascript` 一律返回 `权限违例 (-10004)`。
-> 相比之下 `.workflow` 方案由系统直接把选中文件作为 `$@` 传入，不需要任何授权，
-> 而且零常驻进程。旧源码可翻 git 历史第一个提交。
-
-## 改操作逻辑
-
-操作定义在 `build_services.py` 的 `ACTIONS` 列表。改完后：
+`build_services.py` 生成 13 个 Automator `.workflow` 装进 `~/Library/Services/`，
+`test_scripts.py` 对其做冒烟测试。保留作参考；若要回退：
 
 ```bash
-python3 build_services.py && python3 test_scripts.py
+python3 legacy/build_services.py        # 重新生成 workflow 服务
 ```
+
+该方案留下三条宝贵的坑记录（原文见 `legacy/build_services.py` 内注释）：
+
+1. **`workflowTypeIdentifier` 必须是 `com.apple.Automator.servicesMenu`**，用 `quickAction` 服务静默不出现。
+2. **`NSSendFileTypes` 必须是具体 UTI**，`public.item` 是抽象顶层类型，系统不会拿它匹配任何文件（本方案的 Info.plist 同样遵守这条）。
+3. **服务 XPC 上下文里 `pbcopy` 写剪贴板会「蒸发」**（macOS 27.0 实测）：写方进程立刻退出则数据被系统回收——退出码 0、当场可读、数秒后消失。当时用「osascript 写入 + delay 1.5 秒」绕过；App 方案跑在正常进程上下文，此坑天然不存在，剪贴板写入即时生效。
