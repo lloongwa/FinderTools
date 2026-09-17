@@ -35,16 +35,26 @@
 
 ## 安装
 
-1. 从 [Releases](https://github.com/lloongwa/FinderTools/releases/latest) 下载 `FinderTools-x.x.x.dmg` 并打开
-2. 把 **FinderTools.app** 拖进 **Applications**
-3. **必做(只需一次)**:终端执行
+打开「终端」(启动台搜索"终端"),粘贴这一行,回车:
 
 ```bash
-xattr -dr com.apple.quarantine ~/Applications/FinderTools.app
+curl -fsSL https://raw.githubusercontent.com/lloongwa/FinderTools/main/install.sh | bash
 ```
 
-> macOS 会给从网上下载的未公证 App 加「隔离」标记,不解除的话,右键操作会提示
-> **「已损坏,无法打开」**——这是 Gatekeeper 的限制,不是安装失败。解除一次后永久有效。
+看到 ✅ 就装完了。右键任意文件 → **服务**,即可使用。
+
+> **为什么需要这一行命令?** macOS 规定:未经苹果公证的软件,从网上下载后会被"隔离",
+> 直接打开会提示「已损坏」。这条命令帮你下载、安装并解除隔离,全自动,复制回车就好。
+
+**手动安装**(不想用命令):从 [Releases](https://github.com/lloongwa/FinderTools/releases/latest) 下载 DMG,
+把 App 拖进 Applications,然后**必须**在终端执行一次:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/FinderTools.app
+```
+
+(拖到个人目录就相应替换路径。不做这一步,右键操作会报「已损坏,无法打开」——
+是 Gatekeeper 的限制,不是安装失败。)
 
 装完即用。若右键菜单里没看到新操作,先执行 `killall Finder`。
 
